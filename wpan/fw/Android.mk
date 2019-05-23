@@ -16,7 +16,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := TIInit_11.8.32.bts
-LOCAL_SRC_FILES := $(LOCAL_PATH)/TIInit_11.8.32.bts
+LOCAL_SRC_FILES := TIInit_11.8.32.bts
 LOCAL_MODULE_CLASS := FIRMWARE
 LOCAL_MODULE_PATH := $(TARGET_OUT_VENDOR_ETC)/firmware/ti-connectivity
 LOCAL_MODULE_TAGS := optional
