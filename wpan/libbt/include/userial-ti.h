@@ -18,7 +18,7 @@
 #define USERIAL_VENDOR_H
 
 #include <termios.h>
-#include "bt_vendor-ti.h"
+#include <bt_vendor-ti.h>
 #include "userial.h"
 
 #define VND_PORT_NAME_MAXLEN    256

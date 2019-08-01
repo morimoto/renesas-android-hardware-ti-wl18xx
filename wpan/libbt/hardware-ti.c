@@ -33,9 +33,9 @@
 #include <unistd.h>
 
 #include "bt_hci_bdroid.h"
-#include "bt_vendor-ti.h"
-#include "userial-ti.h"
-#include "upio-ti.h"
+#include <bt_vendor-ti.h>
+#include <userial-ti.h>
+#include <upio-ti.h>
 
 #define ACTION_SEND_COMMAND                 1
 #define ACTION_WAIT_EVENT                   2

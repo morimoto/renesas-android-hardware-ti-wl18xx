@@ -36,9 +36,13 @@
 #include <bt_vendor_lib.h>
 #include <bt_hci_bdroid.h>
 
-#include "bt_vendor-ti.h"
-#include "userial-ti.h"
-#include "upio-ti.h"
+#include <bt_vendor-ti.h>
+#include <userial-ti.h>
+#include <upio-ti.h>
+
+#ifdef UNITTEST
+#include <bt_vendor-ti-tests.h>
+#endif // UNITTEST
 
 extern void hw_config_start(void);
 
@@ -129,3 +133,10 @@ const bt_vendor_interface_t BLUETOOTH_VENDOR_LIB_INTERFACE  = {
     ti_op,
     ti_cleanup,
 };
+
+#ifdef UNITTEST
+const bt_vendor_interface_t* getVendorInterface() {
+    return &BLUETOOTH_VENDOR_LIB_INTERFACE;
+}
+
+#endif // UNITTEST

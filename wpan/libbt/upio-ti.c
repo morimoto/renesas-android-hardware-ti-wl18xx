@@ -21,12 +21,21 @@
 #include <errno.h>
 #include <string.h>
 #include <cutils/properties.h>
-#include "bt_vendor-ti.h"
-#include "upio-ti.h"
-#include "userial-ti.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
+
+#include <bt_vendor-ti.h>
+#include <upio-ti.h>
+#include <userial-ti.h>
+
+#ifdef UNITTEST
+#include <upio-ti-tests.h>
+upio_ti_stubs upio_stubs = {
+    .is_rfkill_disabled_stub = NULL,
+    .init_rfkill_stub = NULL
+};
+#endif // UNITTEST
 
 #define MAX_PATH_LEN    64
 #define BUF_LEN         16
@@ -36,6 +45,14 @@ static char* rfkill_state_path = NULL;
 
 static int is_rfkill_disabled(void) {
     char value[PROPERTY_VALUE_MAX];
+
+#ifdef UNITTEST
+    if ((upio_stubs.is_rfkill_disabled_stub != NULL) &&
+        (upio_stubs.is_rfkill_disabled_stub != is_rfkill_disabled)) {
+        return upio_stubs.is_rfkill_disabled_stub();
+    }
+#endif // UNITTEST
+
     property_get("ro.rfkilldisabled", value, "0");
     ALOGV("is_rfkill_disabled ? [%s]", value);
 
@@ -50,6 +67,13 @@ static int init_rfkill() {
     char path[MAX_PATH_LEN];
     char buf[BUF_LEN];
     int fd, sz, id;
+
+#ifdef UNITTEST
+    if ((upio_stubs.init_rfkill_stub != NULL) &&
+        (upio_stubs.init_rfkill_stub != init_rfkill)) {
+        return upio_stubs.init_rfkill_stub();
+    }
+#endif // UNITTEST
 
     if (is_rfkill_disabled() == STATUS_FAIL) {
         return STATUS_FAIL;
@@ -128,3 +152,22 @@ int upio_set_bluetooth_power(int on) {
 
     return ret;
 }
+
+#ifdef UNITTEST
+void upio_set_stubs(iv_stub is_rfkill_disabled_stub, iv_stub init_rfkill_stub) {
+    upio_stubs.is_rfkill_disabled_stub = is_rfkill_disabled_stub;
+    upio_stubs.init_rfkill_stub = init_rfkill_stub;
+}
+
+upio_ti_stubs* get_upio_stubs(void) {
+    return &upio_stubs;
+}
+
+iv_func get_init_rfkill(void) {
+    return init_rfkill;
+}
+
+iv_func get_is_rfkill_disabled(void) {
+    return is_rfkill_disabled;
+}
+#endif // UNITTEST

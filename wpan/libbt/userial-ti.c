@@ -26,6 +26,13 @@
 #include <unistd.h>
 #include <time.h>
 
+#ifdef UNITTEST
+#include <userial-ti-tests.h>
+userial_ti_stubs userial_stubs = {
+    .default_baud_stub = NULL
+};
+#endif // UNITTEST
+
 vnd_userial_cb_t vnd_userial;
 
 void userial_vendor_init(void) {
@@ -43,7 +50,8 @@ int userial_vendor_open(void) {
     }
 
     if (userial_set_default_baud() < 0) {
-        ALOGE(" userial_set_default_baud() failed");
+        ALOGE(" userial_set_default_baud() failed, closing");
+        userial_vendor_close();
         return -1;
     }
 
@@ -100,6 +108,12 @@ int userial_vendor_set_baud(int baud_rate, int flow_ctrl) {
 }
 
 int userial_set_default_baud(void) {
+#ifdef UNITTEST
+    if (userial_stubs.default_baud_stub != NULL) {
+        return userial_stubs.default_baud_stub();
+    }
+#endif // UNITTEST
+
     userial_get_termios();
     /* Change the UART attributes before
      * setting the default baud rate*/
@@ -126,3 +140,9 @@ void userial_get_termios(void) {
         ALOGE(" Can't get port settings");
     }
 }
+
+#ifdef UNITTEST
+void userial_set_stubs(iv_stub userial_set_default_baud_stub) {
+    userial_stubs.default_baud_stub = userial_set_default_baud_stub;
+}
+#endif // UNITTEST
