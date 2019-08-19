@@ -142,7 +142,7 @@ static uint8_t hw_config_load_bts(const char* bts_src_filename) {
         return STATUS_FAIL;
     }
 
-    if (fread(hw_cfg_cb.fw_data, 1, hw_cfg_cb.len, bts_scr_file) != hw_cfg_cb.len) {
+    if ((long)(fread(hw_cfg_cb.fw_data, 1, hw_cfg_cb.len, bts_scr_file)) != hw_cfg_cb.len) {
         ALOGE("%s: Firmware file reading failed: %s", __func__, strerror(errno));
         fclose(bts_scr_file);
         return STATUS_FAIL;
@@ -151,7 +151,7 @@ static uint8_t hw_config_load_bts(const char* bts_src_filename) {
     fclose(bts_scr_file);
     hw_cfg_cb.cur_action = hw_cfg_cb.fw_data +
                            sizeof(bts_header_t);
-    hw_cfg_cb.len -= sizeof(bts_header_t);
+    hw_cfg_cb.len -= (long)(sizeof(bts_header_t));
     hw_cfg_cb.state = HW_CFG_DOWNLOAD;
     return STATUS_SUCCESS;
 }
@@ -180,7 +180,7 @@ static void skip_hci_command(uint8_t** ptr, long* len) {
         ALOGE("invalid action after skipped command");
     } else {
         *ptr = *ptr + bts_action_t_size + cur_action->size;
-        *len = *len - (bts_action_t_size +
+        *len = *len - (long)(bts_action_t_size +
                        cur_action->size);
         // warn user on not commenting these in firmware
         ALOGW("skipping the wait event");
@@ -258,7 +258,7 @@ static uint8_t hw_download_firmware_helper(void) {
     while (hw_cfg_cb.len > 0 && hw_cfg_cb.cur_action &&
            cur_action->type != ACTION_SEND_COMMAND) {
         hw_cfg_cb.len =
-            hw_cfg_cb.len - (bts_action_t_size +
+            hw_cfg_cb.len - (long)(bts_action_t_size +
                              cur_action->size);
         hw_cfg_cb.cur_action =
             hw_cfg_cb.cur_action + bts_action_t_size +
@@ -314,7 +314,7 @@ static uint8_t hw_download_firmware(HC_BT_HDR* p_buf) {
         memcpy(p, action_command->data,
                action_command->plen);
         hw_cfg_cb.len =
-            hw_cfg_cb.len - (bts_action_t_size +
+            hw_cfg_cb.len - (long)(bts_action_t_size +
                              cur_action->size);
         hw_cfg_cb.cur_action =
             hw_cfg_cb.cur_action + bts_action_t_size +

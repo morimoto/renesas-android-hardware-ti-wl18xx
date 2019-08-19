@@ -45,7 +45,7 @@ extern void hw_config_start(void);
 bt_vendor_callbacks_t* bt_vendor_cbacks = NULL;
 uint8_t vnd_local_bd_addr[BD_ADDR_LEN] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static const int BT_HC_STATUS_FAIL = -1;
-unsigned int hci_tty_fd = -1;
+unsigned int hci_tty_fd = 0;
 
 static int ti_init(const bt_vendor_callbacks_t* p_cb,
                    unsigned char* local_bdaddr) {
