@@ -50,6 +50,9 @@
 #define HCI_VS_SLP_CFG                      0xFD0C
 #define HCI_READ_LOCAL_BDADDR               0x1009
 #define HCI_READ_LOCAL_VERSION              0x1001
+#define HCI_VS_WRITE_SCO_CONFIG             0xFE10
+#define HCI_VS_WRITE_CODEC_CONFIG           0xFD06
+#define HCI_VS_WRITE_CODEC_CONFIG_ENCHANCED 0xFD07
 
 #define HCI_CMD_MAX_LEN                     258
 #define HCI_EVT_CMD_CMPL_STATUS_RET_BYTE    5
@@ -57,6 +60,9 @@
 #define HCI_EVT_CMD_CMPL_LOCAL_BDADDR_ARRAY 6
 #define UPDATE_BAUDRATE_CMD_PARAM_SIZE      6
 #define HCI_CMD_PREAMBLE_SIZE               3
+#define HCIC_PARAM_SIZE_SCO_CFG             5
+#define HCIC_PARAM_SIZE_CODEC_CFG           34
+#define HCIC_PARAM_SIZE_CODEC_CFG_ENHANCED  26
 
 #define FILENAME_MAX_LEN                    255
 #define ZERO_OFFSET                         0
@@ -95,7 +101,19 @@ typedef struct {
     long len;
 } bt_hw_cfg_cb_t;
 
-void hw_config_cback(void* p_mem);
+static void hw_config_cback(void* p_mem);
+static void hc_fill_hci_cmd_preamble(HC_BT_HDR* p_buf);
+static void hci_vs_write_codec_configuration_enhanced(void);
+static void hci_vs_write_codec_configuration(void);
+static void hci_vs_write_sco_configuration(void);
+static void hci_send(int command, HC_BT_HDR* p_buf, tINT_CMD_CBACK callback);
+static void hc_fill_buffer_hci_vs_write_codec_config_enchanced(HC_BT_HDR* p_buf);
+static void hc_fill_buffer_hci_vs_write_codec_config(HC_BT_HDR* p_buf);
+static void hc_fill_buffer_hci_vs_write_sco_config(HC_BT_HDR* p_buf);
+static HC_BT_HDR* hc_allocate_buffer(void);
+static void hci_free_buffer(void* p_mem);
+static void abort_sco_configuration(void);
+
 extern uint8_t vnd_local_bd_addr[BD_ADDR_LEN];
 static bt_hw_cfg_cb_t hw_cfg_cb = {0, NULL, NULL, 0};
 extern vnd_userial_cb_t vnd_userial;
@@ -479,5 +497,149 @@ void hw_config_cback(void* p_mem) {
         }
 
         hw_cfg_cb.state = 0;
+    }
+}
+
+void hw_configure_sco(void) {
+    hci_vs_write_codec_configuration();
+    hci_vs_write_codec_configuration_enhanced();
+    hci_vs_write_sco_configuration();
+    if (bt_vendor_cbacks) {
+        bt_vendor_cbacks->scocfg_cb(BT_VND_OP_RESULT_SUCCESS);
+    }
+}
+
+static void hci_vs_write_sco_configuration(void) {
+    HC_BT_HDR* p_buf = hc_allocate_buffer();
+    if (p_buf) {
+        hc_fill_hci_cmd_preamble(p_buf);
+        hc_fill_buffer_hci_vs_write_sco_config(p_buf);
+        hci_send(HCI_VS_WRITE_SCO_CONFIG, p_buf, hci_free_buffer);
+    } else {
+        abort_sco_configuration();
+    }
+}
+
+static void hci_vs_write_codec_configuration(void) {
+    HC_BT_HDR* p_buf = hc_allocate_buffer();
+    if (p_buf) {
+        hc_fill_hci_cmd_preamble(p_buf);
+        hc_fill_buffer_hci_vs_write_codec_config(p_buf);
+        hci_send(HCI_VS_WRITE_CODEC_CONFIG, p_buf, hci_free_buffer);
+    } else {
+        abort_sco_configuration();
+    }
+}
+
+static void hci_vs_write_codec_configuration_enhanced(void) {
+    HC_BT_HDR* p_buf = hc_allocate_buffer();
+    if (p_buf) {
+        hc_fill_hci_cmd_preamble(p_buf);
+        hc_fill_buffer_hci_vs_write_codec_config_enchanced(p_buf);
+        hci_send(HCI_VS_WRITE_CODEC_CONFIG_ENCHANCED, p_buf, hci_free_buffer);
+    } else {
+        abort_sco_configuration();
+    }
+}
+
+static HC_BT_HDR* hc_allocate_buffer(void) {
+    HC_BT_HDR* buffer = NULL;
+    if (bt_vendor_cbacks) {
+        buffer = (HC_BT_HDR*)bt_vendor_cbacks->alloc(BT_HC_HDR_SIZE + HCI_CMD_MAX_LEN);
+    } else {
+        ALOGE("Failed to allocate HC buffer");
+    }
+    return buffer;
+}
+
+static void hc_fill_hci_cmd_preamble(HC_BT_HDR* p_buf) {
+    p_buf->event = MSG_STACK_TO_HC_HCI_CMD;
+    p_buf->offset = ZERO_OFFSET;
+    p_buf->layer_specific = 0;
+    p_buf->len = HCI_CMD_PREAMBLE_SIZE;
+}
+
+static void hc_fill_buffer_hci_vs_write_sco_config(HC_BT_HDR* p_buf) {
+    p_buf->len += HCIC_PARAM_SIZE_SCO_CFG;
+    uint8_t* p = p_buf->data;
+    UINT16_TO_STREAM(p, HCI_VS_WRITE_SCO_CONFIG);
+    *p++ = HCIC_PARAM_SIZE_SCO_CFG; // parameter length
+    memset(p, 0, HCIC_PARAM_SIZE_SCO_CFG);
+}
+
+static void hc_fill_buffer_hci_vs_write_codec_config(HC_BT_HDR* p_buf) {
+    p_buf->len += HCIC_PARAM_SIZE_CODEC_CFG;
+    uint8_t* p = p_buf->data;
+    UINT16_TO_STREAM(p, HCI_VS_WRITE_CODEC_CONFIG);
+    *p++ = HCIC_PARAM_SIZE_CODEC_CFG; // parameter length
+
+    UINT16_TO_STREAM(p, 2048);
+    UINT8_TO_STREAM(p, 0x01);      // PCM slave
+    UINT32_TO_STREAM(p, 16000);    // Frame-sync frequency
+    UINT16_TO_STREAM(p, 0x0001);   // Frame-sync duty cycle
+    UINT8_TO_STREAM(p, 0x00);      // Frame-sync edge
+    UINT8_TO_STREAM(p, 0x00);      // Frame-sync polarity
+    UINT8_TO_STREAM(p, 0x00);      // Reserved
+    UINT16_TO_STREAM(p, 0x0010);   // Channel 1 data out size bits
+    UINT16_TO_STREAM(p, 0x0001);   // Channel 1 data out offset
+    UINT8_TO_STREAM(p, 0x01);      // Channel 1 data out edge
+    UINT16_TO_STREAM(p, 0x0010);   // Channel 1 data in size bits
+    UINT16_TO_STREAM(p, 0x0001);   // Channel 1 data in offset
+    UINT8_TO_STREAM(p, 0x00);      // Channel 1 data in edge
+    UINT8_TO_STREAM(p, 0x00);      // Reserved
+    UINT16_TO_STREAM(p, 0x0010);   // Channel 2 data out size bits
+    UINT16_TO_STREAM(p, 0x0011);   // Channel 2 data out offset
+    UINT8_TO_STREAM(p, 0x01);      // Channel 2 data out edge
+    UINT16_TO_STREAM(p, 0x0010);   // Channel 2 data in size bits
+    UINT16_TO_STREAM(p, 0x0011);   // Channel 2 data in offset
+    UINT8_TO_STREAM(p, 0x00);      // Channel 2 data in edge
+    UINT8_TO_STREAM(p, 0x00);      // Reserved
+}
+
+static void hc_fill_buffer_hci_vs_write_codec_config_enchanced(HC_BT_HDR* p_buf) {
+    p_buf->len += HCIC_PARAM_SIZE_CODEC_CFG_ENHANCED;
+    uint8_t* p = p_buf->data;
+    UINT16_TO_STREAM(p, HCI_VS_WRITE_CODEC_CONFIG_ENCHANCED);
+    *p++ = HCIC_PARAM_SIZE_CODEC_CFG_ENHANCED; // parameter length
+
+    UINT8_TO_STREAM(p, 0x00);        // PCM clock shutdown
+    UINT16_TO_STREAM(p, 0x0000);     // PCM clock start
+    UINT16_TO_STREAM(p, 0x0000);     // PCM clock stop
+    UINT8_TO_STREAM(p, 0x00);        // Reserved
+    UINT8_TO_STREAM(p, 0x04);        // Channel 1 data in order
+    UINT8_TO_STREAM(p, 0x04);        // Channel 1 data out order
+    UINT8_TO_STREAM(p, 0x01);        // Channel 1 data out mode
+    UINT8_TO_STREAM(p, 0x00);        // Channel 1 data out duplication
+    UINT32_TO_STREAM(p, 0x00000000); // Channel 1 TX_dup_value
+    UINT8_TO_STREAM(p, 0x00);        // Channel 1 data quant
+    UINT8_TO_STREAM(p, 0x00);        // Reserved
+    UINT8_TO_STREAM(p, 0x04);        // Channel 2 data in order
+    UINT8_TO_STREAM(p, 0x04);        // Channel 2 data out order
+    UINT8_TO_STREAM(p, 0x01);        // Channel 2 data out mode
+    UINT8_TO_STREAM(p, 0x00);        // Channel 2 data out duplication
+    UINT32_TO_STREAM(p, 0x00000000); // Channel 2 TX_dup_value
+    UINT8_TO_STREAM(p, 0x00);        // Channel data quant
+    UINT8_TO_STREAM(p, 0x00);        // Reserved
+}
+
+static void hci_send(int command, HC_BT_HDR* p_buf, tINT_CMD_CBACK callback) {
+    if (bt_vendor_cbacks) {
+        bt_vendor_cbacks->xmit_cb(command, p_buf, callback);
+    } else {
+        ALOGE("Failed to send HCI command");
+    }
+}
+
+static void hci_free_buffer(void* p_mem) {
+    HC_BT_HDR* p_evt_buf = (HC_BT_HDR*)p_mem;
+    if (bt_vendor_cbacks) {
+        bt_vendor_cbacks->dealloc(p_evt_buf);
+    }
+}
+
+static void abort_sco_configuration(void) {
+    ALOGE("vendor lib sco conf aborted");
+    if (bt_vendor_cbacks) {
+        bt_vendor_cbacks->scocfg_cb(BT_VND_OP_RESULT_FAIL);
     }
 }

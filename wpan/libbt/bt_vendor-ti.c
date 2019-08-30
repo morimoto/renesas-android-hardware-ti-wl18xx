@@ -45,7 +45,7 @@
 #endif // UNITTEST
 
 extern void hw_config_start(void);
-
+extern void hw_configure_sco(void);
 bt_vendor_callbacks_t* bt_vendor_cbacks = NULL;
 uint8_t vnd_local_bd_addr[BD_ADDR_LEN] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static const int BT_HC_STATUS_FAIL = -1;
@@ -97,7 +97,7 @@ static int ti_op(bt_vendor_opcode_t opcode, void* param) {
 
     // Since new stack expects scocfg_cb we are returning SUCCESS here
     case BT_VND_OP_SCO_CFG: {
-        bt_vendor_cbacks->scocfg_cb(BT_VND_OP_RESULT_SUCCESS);
+        hw_configure_sco();
         break;
     }
 
