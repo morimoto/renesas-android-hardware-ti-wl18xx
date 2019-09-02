@@ -472,6 +472,8 @@ void hw_config_cback(void* p_mem) {
             ALOGV("HW_CFG_DOWNLOAD_END");
             bt_vendor_cbacks->dealloc(p_buf);
             free(hw_cfg_cb.fw_data);
+            hci_vs_write_codec_configuration();
+            hci_vs_write_codec_configuration_enhanced();
             bt_vendor_cbacks->fwcfg_cb(BT_VND_OP_RESULT_SUCCESS);
             hw_cfg_cb.state = 0;
             is_proceeding = STATUS_SUCCESS;
