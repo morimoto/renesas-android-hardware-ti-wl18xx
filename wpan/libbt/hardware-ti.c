@@ -112,7 +112,8 @@ static void hc_fill_buffer_hci_vs_write_codec_config(HC_BT_HDR* p_buf);
 static void hc_fill_buffer_hci_vs_write_sco_config(HC_BT_HDR* p_buf);
 static HC_BT_HDR* hc_allocate_buffer(void);
 static void hci_free_buffer(void* p_mem);
-static void abort_sco_configuration(void);
+static void on_sco_configuration_fail(void);
+static void on_sco_configuration_success(void);
 
 extern uint8_t vnd_local_bd_addr[BD_ADDR_LEN];
 static bt_hw_cfg_cb_t hw_cfg_cb = {0, NULL, NULL, 0};
@@ -501,48 +502,51 @@ void hw_config_cback(void* p_mem) {
 }
 
 void hw_configure_sco(void) {
+    ALOGV("%s", __func__);
+    hci_vs_write_sco_configuration();
     hci_vs_write_codec_configuration();
     hci_vs_write_codec_configuration_enhanced();
-    hci_vs_write_sco_configuration();
-    if (bt_vendor_cbacks) {
-        bt_vendor_cbacks->scocfg_cb(BT_VND_OP_RESULT_SUCCESS);
-    }
+    on_sco_configuration_success();
 }
 
 static void hci_vs_write_sco_configuration(void) {
+    ALOGV("%s", __func__);
     HC_BT_HDR* p_buf = hc_allocate_buffer();
     if (p_buf) {
         hc_fill_hci_cmd_preamble(p_buf);
         hc_fill_buffer_hci_vs_write_sco_config(p_buf);
         hci_send(HCI_VS_WRITE_SCO_CONFIG, p_buf, hci_free_buffer);
     } else {
-        abort_sco_configuration();
+        on_sco_configuration_fail();
     }
 }
 
 static void hci_vs_write_codec_configuration(void) {
+    ALOGV("%s", __func__);
     HC_BT_HDR* p_buf = hc_allocate_buffer();
     if (p_buf) {
         hc_fill_hci_cmd_preamble(p_buf);
         hc_fill_buffer_hci_vs_write_codec_config(p_buf);
         hci_send(HCI_VS_WRITE_CODEC_CONFIG, p_buf, hci_free_buffer);
     } else {
-        abort_sco_configuration();
+        on_sco_configuration_fail();
     }
 }
 
 static void hci_vs_write_codec_configuration_enhanced(void) {
+    ALOGV("%s", __func__);
     HC_BT_HDR* p_buf = hc_allocate_buffer();
     if (p_buf) {
         hc_fill_hci_cmd_preamble(p_buf);
         hc_fill_buffer_hci_vs_write_codec_config_enchanced(p_buf);
         hci_send(HCI_VS_WRITE_CODEC_CONFIG_ENCHANCED, p_buf, hci_free_buffer);
     } else {
-        abort_sco_configuration();
+        on_sco_configuration_fail();
     }
 }
 
 static HC_BT_HDR* hc_allocate_buffer(void) {
+    ALOGV("%s", __func__);
     HC_BT_HDR* buffer = NULL;
     if (bt_vendor_cbacks) {
         buffer = (HC_BT_HDR*)bt_vendor_cbacks->alloc(BT_HC_HDR_SIZE + HCI_CMD_MAX_LEN);
@@ -553,6 +557,7 @@ static HC_BT_HDR* hc_allocate_buffer(void) {
 }
 
 static void hc_fill_hci_cmd_preamble(HC_BT_HDR* p_buf) {
+    ALOGV("%s", __func__);
     p_buf->event = MSG_STACK_TO_HC_HCI_CMD;
     p_buf->offset = ZERO_OFFSET;
     p_buf->layer_specific = 0;
@@ -560,6 +565,7 @@ static void hc_fill_hci_cmd_preamble(HC_BT_HDR* p_buf) {
 }
 
 static void hc_fill_buffer_hci_vs_write_sco_config(HC_BT_HDR* p_buf) {
+    ALOGV("%s", __func__);
     p_buf->len += HCIC_PARAM_SIZE_SCO_CFG;
     uint8_t* p = p_buf->data;
     UINT16_TO_STREAM(p, HCI_VS_WRITE_SCO_CONFIG);
@@ -568,6 +574,7 @@ static void hc_fill_buffer_hci_vs_write_sco_config(HC_BT_HDR* p_buf) {
 }
 
 static void hc_fill_buffer_hci_vs_write_codec_config(HC_BT_HDR* p_buf) {
+    ALOGV("%s", __func__);
     p_buf->len += HCIC_PARAM_SIZE_CODEC_CFG;
     uint8_t* p = p_buf->data;
     UINT16_TO_STREAM(p, HCI_VS_WRITE_CODEC_CONFIG);
@@ -597,6 +604,7 @@ static void hc_fill_buffer_hci_vs_write_codec_config(HC_BT_HDR* p_buf) {
 }
 
 static void hc_fill_buffer_hci_vs_write_codec_config_enchanced(HC_BT_HDR* p_buf) {
+    ALOGV("%s", __func__);
     p_buf->len += HCIC_PARAM_SIZE_CODEC_CFG_ENHANCED;
     uint8_t* p = p_buf->data;
     UINT16_TO_STREAM(p, HCI_VS_WRITE_CODEC_CONFIG_ENCHANCED);
@@ -623,6 +631,7 @@ static void hc_fill_buffer_hci_vs_write_codec_config_enchanced(HC_BT_HDR* p_buf)
 }
 
 static void hci_send(int command, HC_BT_HDR* p_buf, tINT_CMD_CBACK callback) {
+    ALOGV("%s", __func__);
     if (bt_vendor_cbacks) {
         bt_vendor_cbacks->xmit_cb(command, p_buf, callback);
     } else {
@@ -631,15 +640,22 @@ static void hci_send(int command, HC_BT_HDR* p_buf, tINT_CMD_CBACK callback) {
 }
 
 static void hci_free_buffer(void* p_mem) {
+    ALOGV("%s", __func__);
     HC_BT_HDR* p_evt_buf = (HC_BT_HDR*)p_mem;
     if (bt_vendor_cbacks) {
         bt_vendor_cbacks->dealloc(p_evt_buf);
     }
 }
 
-static void abort_sco_configuration(void) {
+static void on_sco_configuration_fail(void) {
     ALOGE("vendor lib sco conf aborted");
     if (bt_vendor_cbacks) {
         bt_vendor_cbacks->scocfg_cb(BT_VND_OP_RESULT_FAIL);
+    }
+}
+
+static void on_sco_configuration_success(void) {
+    if (bt_vendor_cbacks) {
+        bt_vendor_cbacks->scocfg_cb(BT_VND_OP_RESULT_SUCCESS);
     }
 }
