@@ -66,26 +66,12 @@ protected:
     }
 };
 
-TEST_F(LibbtVendorTest, UpioIsRfkillDisabledTest) {
-    char value[PROPERTY_VALUE_MAX];
-    property_get("ro.rfkilldisabled", value, "0");
-    if (strcmp(value, "1") == 0) {
-        ASSERT_EQ(get_is_rfkill_disabled()(), STATUS_FAIL);
-    }
-    else {
-        ASSERT_EQ(get_is_rfkill_disabled()(), STATUS_SUCCESS);
-    }
-}
-
 TEST_F(LibbtVendorTest, UpioInitRfkillTest) {
-    upio_stubs.is_rfkill_disabled_stub = return_failure;
     ASSERT_EQ(get_init_rfkill()(), STATUS_FAIL);
 }
 
 TEST_F(LibbtVendorTest, UpioSetBtPowerTest) {
-    upio_stubs.is_rfkill_disabled_stub = return_failure;
     ASSERT_EQ(upio_set_bluetooth_power(UPIO_BT_POWER_ON), STATUS_FAIL);
-    upio_stubs.is_rfkill_disabled_stub = return_success;
     upio_stubs.init_rfkill_stub = return_failure;
     ASSERT_EQ(upio_set_bluetooth_power(UPIO_BT_POWER_ON), STATUS_FAIL);
 }

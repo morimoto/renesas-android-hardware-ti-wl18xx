@@ -32,7 +32,6 @@
 #ifdef UNITTEST
 #include <upio-ti-tests.h>
 upio_ti_stubs upio_stubs = {
-    .is_rfkill_disabled_stub = NULL,
     .init_rfkill_stub = NULL
 };
 #endif // UNITTEST
@@ -42,26 +41,6 @@ upio_ti_stubs upio_stubs = {
 
 static int rfkill_id = -1;
 static char* rfkill_state_path = NULL;
-
-static int is_rfkill_disabled(void) {
-    char value[PROPERTY_VALUE_MAX];
-
-#ifdef UNITTEST
-    if ((upio_stubs.is_rfkill_disabled_stub != NULL) &&
-        (upio_stubs.is_rfkill_disabled_stub != is_rfkill_disabled)) {
-        return upio_stubs.is_rfkill_disabled_stub();
-    }
-#endif // UNITTEST
-
-    property_get("ro.rfkilldisabled", value, "0");
-    ALOGV("is_rfkill_disabled ? [%s]", value);
-
-    if (strcmp(value, "1") == 0) {
-        return STATUS_FAIL;
-    }
-
-    return STATUS_SUCCESS;
-}
 
 static int init_rfkill() {
     char path[MAX_PATH_LEN];
@@ -74,10 +53,6 @@ static int init_rfkill() {
         return upio_stubs.init_rfkill_stub();
     }
 #endif // UNITTEST
-
-    if (is_rfkill_disabled() == STATUS_FAIL) {
-        return STATUS_FAIL;
-    }
 
     for (id = 0; ; id++) {
         snprintf(path, sizeof(path), "/sys/class/rfkill/rfkill%d/type", id);
@@ -118,11 +93,6 @@ int upio_set_bluetooth_power(int on) {
         break;
     }
 
-    // check if we have rfkill interface
-    if (is_rfkill_disabled() == STATUS_FAIL) {
-        return ret;
-    }
-
     if (rfkill_id == -1) {
         if (init_rfkill() == STATUS_FAIL) {
             return ret;
@@ -154,8 +124,7 @@ int upio_set_bluetooth_power(int on) {
 }
 
 #ifdef UNITTEST
-void upio_set_stubs(iv_stub is_rfkill_disabled_stub, iv_stub init_rfkill_stub) {
-    upio_stubs.is_rfkill_disabled_stub = is_rfkill_disabled_stub;
+void upio_set_stubs(iv_stub init_rfkill_stub) {
     upio_stubs.init_rfkill_stub = init_rfkill_stub;
 }
 
@@ -165,9 +134,5 @@ upio_ti_stubs* get_upio_stubs(void) {
 
 iv_func get_init_rfkill(void) {
     return init_rfkill;
-}
-
-iv_func get_is_rfkill_disabled(void) {
-    return is_rfkill_disabled;
 }
 #endif // UNITTEST

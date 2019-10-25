@@ -20,13 +20,11 @@
 #include "libbt_tests_common.h"
 
 typedef struct {
-    iv_stub is_rfkill_disabled_stub;
     iv_stub init_rfkill_stub;
 } upio_ti_stubs;
 
 void upio_set_stubs(iv_stub, iv_stub);
 upio_ti_stubs* get_upio_stubs(void);
 iv_func get_init_rfkill(void);
-iv_func get_is_rfkill_disabled(void);
 
 #endif // UPIO_TI_TEST_H
