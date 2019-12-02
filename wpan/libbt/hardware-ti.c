@@ -594,14 +594,14 @@ static void hc_fill_buffer_hci_vs_write_codec_config(HC_BT_HDR* p_buf) {
     UINT8_TO_STREAM(p, 0x01);      // Channel 1 data out edge
     UINT16_TO_STREAM(p, 0x0010);   // Channel 1 data in size bits
     UINT16_TO_STREAM(p, 0x0001);   // Channel 1 data in offset
-    UINT8_TO_STREAM(p, 0x00);      // Channel 1 data in edge
+    UINT8_TO_STREAM(p, 0x01);      // Channel 1 data in edge
     UINT8_TO_STREAM(p, 0x00);      // Reserved
     UINT16_TO_STREAM(p, 0x0010);   // Channel 2 data out size bits
     UINT16_TO_STREAM(p, 0x0011);   // Channel 2 data out offset
     UINT8_TO_STREAM(p, 0x01);      // Channel 2 data out edge
     UINT16_TO_STREAM(p, 0x0010);   // Channel 2 data in size bits
     UINT16_TO_STREAM(p, 0x0011);   // Channel 2 data in offset
-    UINT8_TO_STREAM(p, 0x00);      // Channel 2 data in edge
+    UINT8_TO_STREAM(p, 0x01);      // Channel 2 data in edge
     UINT8_TO_STREAM(p, 0x00);      // Reserved
 }
 
