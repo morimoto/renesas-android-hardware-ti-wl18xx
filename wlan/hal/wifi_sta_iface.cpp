@@ -41,7 +41,7 @@ WifiStaIface::WifiStaIface(
     const std::string& ifname,
     const std::weak_ptr<iface_util::WifiIfaceUtil> iface_util,
     struct nl_sock* control_socket,
-    int _family_id) 
+    int _family_id)
     : ifname_(ifname),
       iface_util_(iface_util),
       is_valid_(true),
@@ -280,8 +280,10 @@ WifiStatus WifiStaIface::registerEventCallbackInternal(
 }
 
 std::pair<WifiStatus, uint32_t> WifiStaIface::getCapabilitiesInternal() {
-    uint32_t hidl_caps;
-    return {createWifiStatus(WifiStatusCode::ERROR_NOT_AVAILABLE), hidl_caps};
+    uint32_t hidl_caps{0};
+    hidl_caps |= StaIfaceCapabilityMask::STA_5G;
+    hidl_caps |= StaIfaceCapabilityMask::KEEP_ALIVE;
+    return {createWifiStatus(WifiStatusCode::SUCCESS), hidl_caps};
 }
 
 std::pair<WifiStatus, StaApfPacketFilterCapabilities>
@@ -307,11 +309,9 @@ WifiStaIface::getBackgroundScanCapabilitiesInternal() {
 }
 
 std::pair<WifiStatus, std::vector<WifiChannelInMhz>>
-WifiStaIface::getValidFrequenciesForBandInternal(WifiBand /*band*/) {
-    static_assert(sizeof(WifiChannelInMhz) == sizeof(uint32_t),
-        "Size mismatch");
-    std::vector<uint32_t> valid_frequencies;
-    return {createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED), valid_frequencies};
+WifiStaIface::getValidFrequenciesForBandInternal(WifiBand band) {
+    return iface_util_.lock()->getValidFrequenciesForBand(band,
+        family_id, control_socket_, cb);
 }
 
 WifiStatus WifiStaIface::startBackgroundScanInternal(

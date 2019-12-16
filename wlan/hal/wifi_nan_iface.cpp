@@ -30,15 +30,14 @@ using hidl_return_util::validateAndCall;
 WifiNanIface::WifiNanIface(
     const std::string& ifname,
     const std::weak_ptr<iface_util::WifiIfaceUtil> iface_util,
-    struct nl_sock* control_socket)
+    struct nl_sock* control_socket __unused)
     : ifname_(ifname),
       iface_util_(iface_util),
-      is_valid_(true), control_socket_(control_socket) {
+      is_valid_(true) {
     // Register all the callbacks here. these should be valid for the lifetime
     // of the object. Whenever the mode changes legacy HAL will remove
     // all of these callbacks.
     android::wp<WifiNanIface> weak_ptr_this(this);
-
     // Callback for response.
 }
 

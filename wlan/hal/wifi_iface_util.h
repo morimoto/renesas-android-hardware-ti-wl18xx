@@ -20,13 +20,29 @@
 #include <wifi_system/interface_tool.h>
 
 #include <android/hardware/wifi/1.0/IWifi.h>
+#include <sys/socket.h>
+#include <linux/nl80211.h>      //NL80211 definitions
 
 namespace android {
 namespace hardware {
 namespace wifi {
 namespace V1_3 {
 namespace ti {
+
+#include <netlink/genl/genl.h>
+#include <netlink/genl/family.h>
+#include <netlink/genl/ctrl.h>
+#include <netlink/msg.h>
+#include <netlink/attr.h>
+
 namespace iface_util {
+using namespace android::hardware::wifi::V1_0;
+
+struct ap_handler_params
+{
+    uint32_t* band;
+    std::vector<uint32_t>* freqencies;
+};
 
 // Iface event handlers.
 struct IfaceEventHandlers {
@@ -56,7 +72,11 @@ class WifiIfaceUtil {
     virtual void registerIfaceEventHandlers(const std::string& iface_name,
                                             IfaceEventHandlers handlers);
     virtual void unregisterIfaceEventHandlers(const std::string& iface_name);
-
+    std::pair<WifiStatus, std::vector<WifiChannelInMhz>>
+        getValidFrequenciesForBand(WifiBand band, int family_id,
+                                   nl_sock* control_socket_, nl_cb* cb);
+    WifiStatus setCountryCode(const std::array<int8_t, 2>& code,
+                              int family_id, nl_sock* control_socket_);
    private:
     std::array<uint8_t, 6> createRandomMacAddress();
 

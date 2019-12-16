@@ -39,85 +39,6 @@ using hidl_return_util::validateAndCall;
 #include <netlink/msg.h>
 #include <netlink/attr.h>
 
-struct ap_handler_params
-{
-    uint32_t* band;
-    std::vector<uint32_t>* freqencies;
-};
-
-static bool is_band_ok(uint32_t* band, uint32_t freq)
-{
-    /* see 802.11-2007 17.3.8.3.2 and Annex J */
-    if (*band == 1 && freq <= 2484 && freq >=2407) {
-        return true;
-    }
-    return false;
-}
-
-static int getValidFrequenciesForBandInternalCallback(struct nl_msg* msg, void* arg)
-{
-    ap_handler_params* params = reinterpret_cast<ap_handler_params*>(arg);
-    nlattr* tb_msg[NL80211_ATTR_MAX + 1];
-    genlmsghdr* gnlh = (struct genlmsghdr*)nlmsg_data(nlmsg_hdr(msg));
-
-    nlattr* tb_band[NL80211_BAND_ATTR_MAX + 1];
-    nlattr* tb_freq[NL80211_FREQUENCY_ATTR_MAX + 1];
-    static nla_policy freq_policy[NL80211_FREQUENCY_ATTR_MAX + 1] = {
-        [NL80211_FREQUENCY_ATTR_FREQ] = { .type = NLA_U32 },
-        [NL80211_FREQUENCY_ATTR_DISABLED] = { .type = NLA_FLAG },
-        [NL80211_FREQUENCY_ATTR_NO_IR] = { .type = NLA_FLAG },
-        [__NL80211_FREQUENCY_ATTR_NO_IBSS] = { .type = NLA_FLAG },
-        [NL80211_FREQUENCY_ATTR_RADAR] = { .type = NLA_FLAG },
-        [NL80211_FREQUENCY_ATTR_MAX_TX_POWER] = { .type = NLA_U32 },
-    };
-
-    nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
-            genlmsg_attrlen(gnlh, 0), NULL);
-
-    /* needed for split dump */
-    if (tb_msg[NL80211_ATTR_WIPHY_BANDS]) {
-        nlattr* nl_band = reinterpret_cast<nlattr*>(nla_data(tb_msg[NL80211_ATTR_WIPHY_BANDS]));
-        int rem_band = nla_len(tb_msg[NL80211_ATTR_WIPHY_BANDS]);
-        for (; nla_ok(nl_band, rem_band); nl_band = nla_next(nl_band, &(rem_band))) {
-            nla_parse(tb_band, NL80211_BAND_ATTR_MAX,
-                reinterpret_cast<nlattr*>(nla_data(nl_band)),
-                    nla_len(nl_band), NULL);
-
-            if (tb_band[NL80211_BAND_ATTR_FREQS]) {
-                nlattr* nl_freq = reinterpret_cast<nlattr*>(nla_data(tb_band[NL80211_BAND_ATTR_FREQS]));
-                int rem_freq = nla_len(tb_band[NL80211_BAND_ATTR_FREQS]);
-                for (; nla_ok(nl_freq, rem_freq); nl_freq = nla_next(nl_freq, &(rem_freq))) {
-                    nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX,
-                        reinterpret_cast<nlattr*>(nla_data(nl_freq)),
-                            nla_len(nl_freq), freq_policy);
-
-                    if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ]) {
-                        continue;
-                    }
-
-                    uint32_t freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
-                    if (!is_band_ok(params->band, freq)) {
-                        break;
-                    }
-
-                    if (!tb_freq[NL80211_FREQUENCY_ATTR_DISABLED]) {
-                        params->freqencies->push_back(freq);
-                    }
-                }
-            }
-        }
-    }
-
-    return NL_SKIP;
-}
-
-
-
-
-
-
-
-
 WifiApIface::WifiApIface(
     const std::string& ifname,
     const std::weak_ptr<iface_util::WifiIfaceUtil> iface_util,
@@ -193,71 +114,12 @@ std::pair<WifiStatus, IfaceType> WifiApIface::getTypeInternal() {
 
 WifiStatus WifiApIface::setCountryCodeInternal(
     const std::array<int8_t, 2>& code) {
-    WifiStatus retval = createWifiStatus(WifiStatusCode::SUCCESS);
-    std::string code_str(code.data(), code.data() + code.size());
-    nl_msg* msg = nlmsg_alloc();
-    if (msg == nullptr) {
-        goto ALLOC_ERROR;
-    }
-
-    if (!genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, family_id, 0, NLM_F_DUMP,
-                NL80211_CMD_REQ_SET_REG, 0)) {
-        goto ERROR;
-    }
-
-    if (nla_put_string(msg, NL80211_ATTR_REG_ALPHA2, code_str.c_str()) != 0) {
-        goto ERROR;
-    }
-
-    if (nl_send_auto(control_socket_, msg) < 0) {
-        goto ERROR;
-    }
-
-    retval = createWifiStatus(WifiStatusCode::SUCCESS);
-ERROR:
-    nlmsg_free(msg);
-ALLOC_ERROR:
-    return retval;
+    return iface_util_.lock()->setCountryCode(code, family_id, control_socket_);
 }
 
 std::pair<WifiStatus, std::vector<WifiChannelInMhz>>
 WifiApIface::getValidFrequenciesForBandInternal(WifiBand band) {
-    static_assert(sizeof(WifiChannelInMhz) == sizeof(uint32_t),
-                         "Size mismatch");
-    std::vector<uint32_t> valid_frequencies;
-    std::pair<WifiStatus, std::vector<WifiChannelInMhz>> retval
-        {createWifiStatus(WifiStatusCode::ERROR_UNKNOWN), {}};
-    ap_handler_params param {reinterpret_cast<uint32_t*>(&band),
-        &valid_frequencies};
-    nl_msg* msg = nlmsg_alloc();
-    if (msg == nullptr) {
-        goto ALLOC_ERROR;
-    }
-
-    if (!genlmsg_put(msg, NL_AUTO_PORT, NL_AUTO_SEQ, family_id, 0, NLM_F_DUMP,
-                     NL80211_CMD_GET_WIPHY, 0)) {
-        goto ERROR;
-    }
-
-    if (nl_send_auto(control_socket_, msg) < 0) {
-        goto ERROR;
-    }
-
-    if (nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM,
-              getValidFrequenciesForBandInternalCallback,
-              reinterpret_cast<void*>(&param)) != 0) {
-        goto ERROR;
-    }
-    if (nl_recvmsgs(control_socket_, cb) < 0) {
-        goto ERROR;
-    }
-
-    retval = {createWifiStatus(WifiStatusCode::SUCCESS), valid_frequencies};
-
-ERROR:
-    nlmsg_free(msg);
-ALLOC_ERROR:
-    return retval;
+    return iface_util_.lock()->getValidFrequenciesForBand(band, family_id, control_socket_, cb);
 }
 
 }  // namespace ti

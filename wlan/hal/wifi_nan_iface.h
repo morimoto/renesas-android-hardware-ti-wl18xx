@@ -154,8 +154,6 @@ private:
     hidl_callback_util::HidlCallbackHandler<V1_2::IWifiNanIfaceEventCallback>
         event_cb_handler_1_2_;
 
-    struct nl_sock* control_socket_;
-
     DISALLOW_COPY_AND_ASSIGN(WifiNanIface);
 };
 
