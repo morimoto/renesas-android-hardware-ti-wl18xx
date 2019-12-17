@@ -662,12 +662,15 @@ WifiStatus WifiChip::registerEventCallbackInternal(
 }
 
 std::pair<WifiStatus, uint32_t> WifiChip::getCapabilitiesInternal() {
-    // Deprecated support for this callback.
-    return {createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED), 0};
+    uint32_t hidl_caps{0};
+    hidl_caps |= ChipCapabilityMask::P2P_RAND_MAC;
+    return {createWifiStatus(WifiStatusCode::SUCCESS), hidl_caps};
 }
 
 std::pair<WifiStatus, uint32_t> WifiChip::getCapabilitiesInternal_1_3() {
-    return {createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED), 0};
+    uint32_t hidl_caps{0};
+    hidl_caps |= ChipCapabilityMask::P2P_RAND_MAC;
+    return {createWifiStatus(WifiStatusCode::SUCCESS), hidl_caps};
 }
 
 std::pair<WifiStatus, std::vector<IWifiChip::ChipMode>>
