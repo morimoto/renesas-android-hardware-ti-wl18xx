@@ -33,6 +33,24 @@ int wpa_driver_nl80211_driver_cmd(void *priv, char *cmd, char *buf, size_t buf_l
 		if (!ret)
 			ret = os_snprintf(buf, buf_len,
 				"Macaddr = " MACSTR "\n", MAC2STR(macaddr));
+	} else if (os_strncasecmp(cmd, "RXFILTER", 8) == 0) {
+		wpa_printf(MSG_DEBUG,"RXFILTER not yet supported");
+		ret = 0;
+	} else if (os_strncasecmp(cmd, "BTCOEXMODE", 10) == 0) {
+		wpa_printf(MSG_DEBUG,"BTCOEXMODE not yet supported");
+		ret = 0;
+	} else if (os_strncasecmp(cmd, "COUNTRY", 7) == 0) {
+		wpa_printf(MSG_DEBUG,"COUNTRY not yet supported");
+		ret = 0;
+	} else if (os_strncasecmp(cmd, "SETSUSPENDMODE", 14) == 0) {
+		wpa_printf(MSG_DEBUG,"SETSUSPENDMODE not yet supported");
+		ret = 0;
+	} else if (os_strncasecmp(cmd, "BTCOEXSCAN", 10) == 0) {
+		wpa_printf(MSG_DEBUG,"BTCOEXSCAN not yet supported");
+		ret = 0;
+	} else if (os_strncasecmp(cmd, "MIRACAST", 8) == 0) {
+		wpa_printf(MSG_DEBUG,"MIRACAST not yet supported");
+		ret = 0;
 	} else {
 		wpa_printf(MSG_ERROR, "nl80211: unhandled command: %s", cmd);
 	}
