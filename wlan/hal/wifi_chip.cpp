@@ -562,13 +562,13 @@ Return<void> WifiChip::enableDebugErrorAlerts(
 Return<void> WifiChip::selectTxPowerScenario(
     V1_1::IWifiChip::TxPowerScenario scenario,
     selectTxPowerScenario_cb hidl_status_cb) {
-    return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
+    return validateAndCall(this, WifiStatusCode::ERROR_NOT_SUPPORTED,
         &WifiChip::selectTxPowerScenarioInternal, hidl_status_cb, scenario);
 }
 
 Return<void> WifiChip::resetTxPowerScenario(
     resetTxPowerScenario_cb hidl_status_cb) {
-    return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
+    return validateAndCall(this, WifiStatusCode::ERROR_NOT_SUPPORTED,
         &WifiChip::resetTxPowerScenarioInternal, hidl_status_cb);
 }
 
@@ -589,7 +589,7 @@ Return<void> WifiChip::registerEventCallback_1_2(
 
 Return<void> WifiChip::selectTxPowerScenario_1_2(
     TxPowerScenario scenario, selectTxPowerScenario_cb hidl_status_cb) {
-    return validateAndCall(this, WifiStatusCode::ERROR_WIFI_CHIP_INVALID,
+    return validateAndCall(this, WifiStatusCode::ERROR_NOT_SUPPORTED,
         &WifiChip::selectTxPowerScenarioInternal_1_2, hidl_status_cb, scenario);
 }
 
@@ -996,11 +996,11 @@ WifiStatus WifiChip::enableDebugErrorAlertsInternal(bool /*enable*/) {
 
 WifiStatus WifiChip::selectTxPowerScenarioInternal(
         V1_1::IWifiChip::TxPowerScenario /*scenario*/) {
-    return createWifiStatus(WifiStatusCode::ERROR_WIFI_CHIP_INVALID);
+    return createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED);
 }
 
 WifiStatus WifiChip::resetTxPowerScenarioInternal() {
-    return createWifiStatus(WifiStatusCode::ERROR_WIFI_CHIP_INVALID);
+    return createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED);
 }
 
 WifiStatus WifiChip::setLatencyModeInternal(LatencyMode /*mode*/) {
@@ -1016,7 +1016,7 @@ WifiStatus WifiChip::registerEventCallbackInternal_1_2(
 }
 
 WifiStatus WifiChip::selectTxPowerScenarioInternal_1_2(TxPowerScenario /*scenario*/) {
-    return createWifiStatus(WifiStatusCode::ERROR_WIFI_CHIP_INVALID);
+    return createWifiStatus(WifiStatusCode::ERROR_NOT_SUPPORTED);
 }
 
 WifiStatus WifiChip::handleChipConfiguration(
