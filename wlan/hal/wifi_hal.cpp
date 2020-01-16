@@ -752,21 +752,17 @@ public:
         mCountryCode = country_code;
         }
     virtual int create() {
-        int ret;
-
-        ret = mMsg.create(GOOGLE_OUI, WIFI_SUBCMD_SET_COUNTRY_CODE);
+        int ret = mMsg.create(NL80211_CMD_REQ_SET_REG);
         if (ret < 0) {
              ALOGE("Can't create message to send to driver - %d", ret);
              return ret;
         }
 
-        nlattr *data = mMsg.attr_start(NL80211_ATTR_VENDOR_DATA);
-        ret = mMsg.put_string(ANDR_WIFI_ATTRIBUTE_COUNTRY, mCountryCode);
+        ret = mMsg.put_string(NL80211_ATTR_REG_ALPHA2, mCountryCode);
         if (ret < 0) {
+            ALOGE("Can't create message to send to driver - %d", ret);
             return ret;
         }
-
-        mMsg.attr_end(data);
         return WIFI_SUCCESS;
 
     }
@@ -1283,7 +1279,8 @@ wifi_error wifi_set_nodfs_flag(wifi_interface_handle handle, u32 nodfs)
 wifi_error wifi_set_country_code(wifi_interface_handle handle, const char *country_code)
 {
     SetCountryCodeCommand command(handle, country_code);
-    return (wifi_error) command.requestResponse();
+    wifi_error ret = (wifi_error) command.requestResponse();
+    return ret;
 }
 
 static wifi_error wifi_start_rssi_monitoring(wifi_request_id id, wifi_interface_handle
